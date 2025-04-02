@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }} | TechBlog{% endblock %}
+
+{% block content %}
+<article class="container">
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+      <!-- Post Header -->
+      <header class="post-header mb-4">
+        <h1 class="display-4 mb-3">{{ post.title }}</h1>
+        
+        <!-- Post metadata -->
+        <div class="d-flex flex-wrap align-items-center text-muted mb-3">
+          <div class="me-4">
+            <i class="fas fa-user-circle me-1"></i> {{ post.author.username }}
+          </div>
+          <div class="me-4">
+            <i class="far fa-calendar me-1"></i> {{ post.created_at.strftime('%B %d, %Y') }}
+          </div>
+          {% if post.updated_at != post.created_at %}
+          <div>
+            <i class="fas fa-edit me-1"></i> Updated: {{ post.updated_at.strftime('%B %d, %Y') }}
+          </div>
+          {% endif %}
+        </div>
+        
+        <!-- Categories -->
+        {% if post.categories %}
+        <div class="mb-4">
+          {% for category in post.categories %}
+          <a href="{{ url_for('category', category_id=category.id) }}" class="badge bg-secondary text-decoration-none me-1">
+            {{ category.name }}
+          </a>
+          {% endfor %}
+        </div>
+        {% endif %}
+        
+        <!-- Featured Image -->
+        {% if post.feature_image %}
+        <div class="post-feature-image mb-4">
+          <img src="{{ post.feature_image }}" class="img-fluid rounded shadow" alt="{{ post.title }}">
+        </div>
+        {% endif %}
+      </header>
+      
+      <!-- Post Content -->
+      <div class="post-content mb-5">
+        {{ post.content|safe }}
+      </div>
+      
+      <!-- Post Actions -->
+      <div class="post-actions border-top pt-3 mb-5">
+        {% if current_user.is_authenticated and (current_user.id == post.user_id or current_user.is_admin) %}
+        <div class="btn-group">
+          <a href="{{ url_for('edit_post', post_id=post.id) }}" class="btn btn-outline-primary">
+            <i class="fas fa-edit me-1"></i> Edit
+          </a>
+          <button type="button" class="btn btn-outline-danger delete-post-btn" 
+                  data-post-id="{{ post.id }}" data-post-title="{{ post.title }}"
+                  data-bs-toggle="modal" data-bs-target="#delete-post-modal">
+            <i class="fas fa-trash-alt me-1"></i> Delete
+          </button>
+        </div>
+        {% endif %}
+      </div>
+      
+      <!-- Share links -->
+      <div class="post-share mb-5">
+        <h5><i class="fas fa-share-alt me-2"></i>Share this post</h5>
+        <div class="d-flex gap-2">
+          <a href="https://twitter.com/intent/tweet?url={{ request.url }}&text={{ post.title }}" 
+             target="_blank" class="btn btn-outline-primary">
+            <i class="fab fa-twitter"></i>
+          </a>
+          <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.url }}" 
+             target="_blank" class="btn btn-outline-primary">
+            <i class="fab fa-facebook-f"></i>
+          </a>
+          <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ request.url }}&title={{ post.title }}" 
+             target="_blank" class="btn btn-outline-primary">
+            <i class="fab fa-linkedin-in"></i>
+          </a>
+          <button class="btn btn-outline-primary" onclick="navigator.clipboard.writeText('{{ request.url }}');alert('Link copied to clipboard!')">
+            <i class="fas fa-link"></i>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Related Posts (placeholder) -->
+      <div class="related-posts mb-5">
+        <h3 class="mb-4">Related Posts</h3>
+        <div class="row">
+          {% for cat in post.categories %}
+            {% for related_post in cat.posts[:2] %}
+              {% if related_post.id != post.id %}
+              <div class="col-md-6 mb-4">
+                <div class="card h-100">
+                  {% if related_post.feature_image %}
+                  <img src="{{ related_post.feature_image }}" class="card-img-top" alt="{{ related_post.title }}">
+                  {% endif %}
+                  <div class="card-body">
+                    <h5 class="card-title">
+                      <a href="{{ url_for('post', post_id=related_post.id) }}" class="text-decoration-none">
+                        {{ related_post.title }}
+                      </a>
+                    </h5>
+                    <p class="card-text small text-muted">
+                      {{ related_post.created_at.strftime('%B %d, %Y') }} • {{ related_post.author.username }}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              {% endif %}
+            {% endfor %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+
+<!-- Delete Post Modal -->
+<div class="modal fade" id="delete-post-modal" tabindex="-1" aria-labelledby="deletePostModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deletePostModalLabel">Confirm Post Deletion</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete the post "<span id="delete-post-title"></span>"?</p>
+        <p class="text-danger">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form id="post-delete-form" method="post">
+          <button type="submit" class="btn btn-danger" id="confirm-delete-post">Delete Post</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Configure delete post modal
+    const deleteButtons = document.querySelectorAll('.delete-post-btn');
+    const deleteForm = document.getElementById('post-delete-form');
+    const postTitleSpan = document.getElementById('delete-post-title');
+    
+    deleteButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        const postId = this.getAttribute('data-post-id');
+        const postTitle = this.getAttribute('data-post-title');
+        
+        deleteForm.action = `/post/${postId}/delete`;
+        postTitleSpan.textContent = postTitle;
+      });
+    });
+  });
+</script>
+{% endblock %}

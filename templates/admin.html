@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard | TechBlog{% endblock %}
+
+{% block content %}
+<div class="container">
+  <h1 class="mb-4"><i class="fas fa-tachometer-alt me-2"></i>Admin Dashboard</h1>
+  
+  <div id="admin-alerts"></div>
+  
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-lg-3 mb-4">
+      <div class="list-group admin-sidebar">
+        <a href="#posts-section" class="list-group-item list-group-item-action active" data-bs-toggle="list">
+          <i class="fas fa-file-alt me-2"></i>Posts
+        </a>
+        <a href="#categories-section" class="list-group-item list-group-item-action" data-bs-toggle="list">
+          <i class="fas fa-tags me-2"></i>Categories
+        </a>
+        <a href="#users-section" class="list-group-item list-group-item-action" data-bs-toggle="list">
+          <i class="fas fa-users me-2"></i>Users
+        </a>
+      </div>
+      
+      <div class="card mt-4">
+        <div class="card-body">
+          <h5 class="card-title"><i class="fas fa-plus-circle me-2"></i>Quick Actions</h5>
+          <div class="list-group">
+            <a href="{{ url_for('create_post') }}" class="list-group-item list-group-item-action">
+              <i class="fas fa-pen me-2"></i>New Post
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="col-lg-9">
+      <div class="tab-content">
+        <!-- Posts Management -->
+        <div class="tab-pane fade show active" id="posts-section">
+          <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Manage Posts</h5>
+              <a href="{{ url_for('create_post') }}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus me-1"></i>New Post
+              </a>
+            </div>
+            <div class="card-body">
+              <div class="mb-3 row">
+                <div class="col-md-6">
+                  <input type="text" class="form-control" id="post-filter" placeholder="Filter posts...">
+                </div>
+                <div class="col-md-6">
+                  <select class="form-select" id="post-sort">
+                    <option value="date-desc">Sort by Date (Newest)</option>
+                    <option value="date-asc">Sort by Date (Oldest)</option>
+                    <option value="title">Sort by Title</option>
+                    <option value="author">Sort by Author</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="table-responsive">
+                <table class="table table-striped table-hover posts-table admin-table">
+                  <thead>
+                    <tr>
+                      <th>Title</th>
+                      <th>Author</th>
+                      <th>Categories</th>
+                      <th>Date</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% if posts %}
+                      {% for post in posts %}
+                      <tr class="post-row">
+                        <td class="post-title">{{ post.title }}</td>
+                        <td class="post-author">{{ post.author.username }}</td>
+                        <td>
+                          {% for category in post.categories %}
+                          <span class="badge bg-secondary">{{ category.name }}</span>
+                          {% endfor %}
+                        </td>
+                        <td class="post-date" data-timestamp="{{ post.created_at.isoformat() }}">
+                          {{ post.created_at.strftime('%Y-%m-%d') }}
+                        </td>
+                        <td>
+                          <div class="btn-group btn-group-sm">
+                            <a href="{{ url_for('post', post_id=post.id) }}" class="btn btn-outline-primary" title="View">
+                              <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ url_for('edit_post', post_id=post.id) }}" class="btn btn-outline-secondary" title="Edit">
+                              <i class="fas fa-edit"></i>
+                            </a>
+                            <button class="btn btn-outline-danger delete-post-btn" 
+                                    data-post-id="{{ post.id }}" 
+                                    data-post-title="{{ post.title }}" title="Delete">
+                              <i class="fas fa-trash-alt"></i>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    {% else %}
+                      <tr>
+                        <td colspan="5" class="text-center py-5">
+                          <div class="text-muted">
+                            <i class="fas fa-file-alt fa-3x mb-3"></i>
+                            <p>No posts found</p>
+                          </div>
+                        </td>
+                      </tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Categories Management -->
+        <div class="tab-pane fade" id="categories-section">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0"><i class="fas fa-tags me-2"></i>Manage Categories</h5>
+            </div>
+            <div class="card-body">
+              <form id="add-category-form" method="post" action="{{ url_for('create_category') }}" class="mb-4">
+                <div class="row g-3">
+                  <div class="col-md-5">
+                    <input type="text" class="form-control" id="category-name" name="name" placeholder="Category name" required>
+                  </div>
+                  <div class="col-md-5">
+                    <input type="text" class="form-control" id="category-description" name="description" placeholder="Description (optional)">
+                  </div>
+                  <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Add</button>
+                  </div>
+                </div>
+              </form>
+              
+              <div class="table-responsive">
+                <table class="table table-striped admin-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Description</th>
+                      <th>Posts</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% if categories %}
+                      {% for category in categories %}
+                      <tr>
+                        <td>{{ category.name }}</td>
+                        <td>{{ category.description or 'No description' }}</td>
+                        <td>{{ category.posts|length }}</td>
+                        <td>
+                          <button class="btn btn-sm btn-outline-danger delete-category-btn" 
+                                  data-category-id="{{ category.id }}" 
+                                  data-category-name="{{ category.name }}">
+                            <i class="fas fa-trash-alt"></i> Delete
+                          </button>
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    {% else %}
+                      <tr>
+                        <td colspan="4" class="text-center py-5">
+                          <div class="text-muted">
+                            <i class="fas fa-tags fa-3x mb-3"></i>
+                            <p>No categories found</p>
+                          </div>
+                        </td>
+                      </tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
+              
+              <form id="category-delete-form" method="post" style="display: none;"></form>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Users Management -->
+        <div class="tab-pane fade" id="users-section">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0"><i class="fas fa-users me-2"></i>Manage Users</h5>
+            </div>
+            <div class="card-body">
+              <div class="table-responsive">
+                <table class="table table-striped admin-table">
+                  <thead>
+                    <tr>
+                      <th>Username</th>
+                      <th>Email</th>
+                      <th>Posts</th>
+                      <th>Admin</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% if users %}
+                      {% for user in users %}
+                      <tr>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{{ user.posts|length }}</td>
+                        <td>
+                          <div class="form-check form-switch">
+                            <input class="form-check-input toggle-admin-role" type="checkbox" 
+                                  data-user-id="{{ user.id }}" {% if user.is_admin %}checked{% endif %}
+                                  {% if user.id == current_user.id %}disabled{% endif %}>
+                          </div>
+                        </td>
+                        <td>
+                          {% if user.id != current_user.id %}
+                          <button class="btn btn-sm btn-outline-danger" disabled>
+                            <i class="fas fa-user-slash"></i> Disable
+                          </button>
+                          {% else %}
+                          <span class="badge bg-info">Current User</span>
+                          {% endif %}
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    {% else %}
+                      <tr>
+                        <td colspan="5" class="text-center py-5">
+                          <div class="text-muted">
+                            <i class="fas fa-users fa-3x mb-3"></i>
+                            <p>No users found</p>
+                          </div>
+                        </td>
+                      </tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Post Modal -->
+<div class="modal fade" id="delete-post-modal" tabindex="-1" aria-labelledby="deletePostModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deletePostModalLabel">Confirm Post Deletion</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete the post "<span id="delete-post-title"></span>"?</p>
+        <p class="text-danger">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <form id="post-delete-form" method="post">
+          <button type="submit" class="btn btn-danger" id="confirm-delete-post">Delete Post</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}

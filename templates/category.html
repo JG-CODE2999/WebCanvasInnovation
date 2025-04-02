@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}{{ category.name }} | TechBlog{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="row">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+      <div class="category-header mb-4">
+        <h1>
+          <i class="fas fa-tag me-2"></i>{{ category.name }}
+        </h1>
+        {% if category.description %}
+        <p class="lead text-muted">{{ category.description }}</p>
+        {% endif %}
+      </div>
+      
+      {% if posts.items %}
+        {% for post in posts.items %}
+          <article class="card mb-4 shadow-sm fade-in">
+            {% if post.feature_image %}
+            <div class="post-image-container">
+              <img src="{{ post.feature_image }}" class="card-img-top" alt="{{ post.title }}">
+            </div>
+            {% endif %}
+            <div class="card-body">
+              <h2 class="card-title h4">
+                <a href="{{ url_for('post', post_id=post.id) }}" class="text-decoration-none">
+                  {{ post.title }}
+                </a>
+              </h2>
+              
+              <!-- Post metadata -->
+              <div class="mb-2 text-muted">
+                <small>
+                  <i class="fas fa-user-circle me-1"></i> {{ post.author.username }}
+                  <span class="mx-1">•</span>
+                  <i class="far fa-calendar me-1"></i> {{ post.created_at.strftime('%B %d, %Y') }}
+                </small>
+              </div>
+              
+              <!-- Post summary -->
+              <p class="card-text">
+                {% if post.summary %}
+                  {{ post.summary }}
+                {% else %}
+                  {{ post.content[:150] ~ '...' if post.content|length > 150 else post.content }}
+                {% endif %}
+              </p>
+              
+              <a href="{{ url_for('post', post_id=post.id) }}" class="btn btn-primary btn-sm">Read More</a>
+            </div>
+          </article>
+        {% endfor %}
+        
+        <!-- Pagination -->
+        {% if posts.pages > 1 %}
+        <nav aria-label="Page navigation">
+          <ul class="pagination justify-content-center">
+            {% if posts.has_prev %}
+            <li class="page-item">
+              <a class="page-link" href="{{ url_for('category', category_id=category.id, page=posts.prev_num) }}" aria-label="Previous">
+                <span aria-hidden="true">&laquo;</span>
+              </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+              <span class="page-link" aria-hidden="true">&laquo;</span>
+            </li>
+            {% endif %}
+            
+            {% for page_num in range(1, posts.pages + 1) %}
+            <li class="page-item {% if page_num == posts.page %}active{% endif %}">
+              <a class="page-link" href="{{ url_for('category', category_id=category.id, page=page_num) }}">{{ page_num }}</a>
+            </li>
+            {% endfor %}
+            
+            {% if posts.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="{{ url_for('category', category_id=category.id, page=posts.next_num) }}" aria-label="Next">
+                <span aria-hidden="true">&raquo;</span>
+              </a>
+            </li>
+            {% else %}
+            <li class="page-item disabled">
+              <span class="page-link" aria-hidden="true">&raquo;</span>
+            </li>
+            {% endif %}
+          </ul>
+        </nav>
+        {% endif %}
+        
+      {% else %}
+        <div class="alert alert-info">
+          <h4 class="alert-heading">No posts in this category yet!</h4>
+          <p>Be the first to create content in the {{ category.name }} category.</p>
+          {% if current_user.is_authenticated %}
+          <hr>
+          <p class="mb-0">
+            <a href="{{ url_for('create_post') }}" class="btn btn-primary">Create Post</a>
+          </p>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+      <!-- Other Categories Widget -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="fas fa-tags me-2"></i>Other Categories
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex flex-wrap gap-2">
+            {% for cat in categories %}
+              {% if cat.id != category.id %}
+              <a href="{{ url_for('category', category_id=cat.id) }}" class="badge bg-secondary text-decoration-none">
+                {{ cat.name }}
+              </a>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      
+      <!-- About Widget -->
+      <div class="card mb-4">
+        <div class="card-header">
+          <h5 class="card-title mb-0">
+            <i class="fas fa-info-circle me-2"></i>About TechBlog
+          </h5>
+        </div>
+        <div class="card-body">
+          <p>TechBlog is a platform for sharing knowledge and insights about technology, programming, and digital innovation.</p>
+          {% if not current_user.is_authenticated %}
+          <a href="{{ url_for('register') }}" class="btn btn-primary btn-sm">Join the Community</a>
+          {% endif %}
+        </div>
+      </div>
+      
+      <!-- Call to Action -->
+      {% if current_user.is_authenticated %}
+      <div class="card bg-primary text-white mb-4">
+        <div class="card-body">
+          <h5 class="card-title">Share Your Knowledge</h5>
+          <p class="card-text">Have insights or tutorials to share in the {{ category.name }} category?</p>
+          <a href="{{ url_for('create_post') }}" class="btn btn-light">Create a Post</a>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
